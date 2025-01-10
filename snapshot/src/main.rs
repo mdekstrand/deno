@@ -14,7 +14,7 @@ fn main() {
   let out = PathBuf::from(&args[2]);
 
   let compiler_snapshot_path = out.join("COMPILER_SNAPSHOT.bin");
-  create_compiler_snapshot(compiler_snapshot_path, &src);
+  create_compiler_snapshot(compiler_snapshot_path, &out, &src);
 
   let cli_snapshot_path = out.join("CLI_SNAPSHOT.bin");
   create_cli_snapshot(cli_snapshot_path);

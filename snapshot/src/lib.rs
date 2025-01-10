@@ -5,7 +5,6 @@ use std::path::PathBuf;
 
 use deno_core::snapshot::*;
 use deno_runtime::*;
-mod release;
 mod ts;
 
 pub use ts::create_compiler_snapshot;

@@ -10,6 +10,7 @@ use serde::Serialize;
 
 use super::*;
 
+
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 struct BuildInfoResponse {
@@ -129,7 +130,7 @@ deno_core::extension!(deno_tsc,
   },
 );
 
-pub fn create_compiler_snapshot(snapshot_path: PathBuf, cwd: &Path) {
+pub fn create_compiler_snapshot(snapshot_path: PathBuf, out_dir: &Path, cwd: &Path) {
   // libs that are being provided by op crates.
   let mut op_crate_libs = HashMap::new();
   op_crate_libs.insert("deno.cache", deno_cache::get_declaration());
@@ -137,7 +138,7 @@ pub fn create_compiler_snapshot(snapshot_path: PathBuf, cwd: &Path) {
   op_crate_libs.insert("deno.url", deno_url::get_declaration());
   op_crate_libs.insert("deno.web", deno_web::get_declaration());
   op_crate_libs.insert("deno.fetch", deno_fetch::get_declaration());
-  op_crate_libs.insert("deno.webgpu", deno_webgpu_get_declaration());
+  op_crate_libs.insert("deno.webgpu", deno_webgpu_get_declaration(cwd));
   op_crate_libs.insert("deno.websocket", deno_websocket::get_declaration());
   op_crate_libs.insert("deno.webstorage", deno_webstorage::get_declaration());
   op_crate_libs.insert("deno.canvas", deno_canvas::get_declaration());
@@ -255,14 +256,16 @@ pub fn create_compiler_snapshot(snapshot_path: PathBuf, cwd: &Path) {
   // used in the tests to verify that after snapshotting it has the same number
   // of lib files loaded and hasn't included any ones lazily loaded from Rust
   std::fs::write(
-    PathBuf::from(env::var_os("OUT_DIR").unwrap()).join("lib_file_names.json"),
+    out_dir.join("lib_file_names.json"),
     serde_json::to_string(&build_libs).unwrap(),
   )
   .unwrap();
 
+  // convert to string and then leak to dal with create_snapshot's static requirement
+  let cwd_str = cwd.to_str().expect("invalid build path");
   let output = create_snapshot(
     CreateSnapshotOptions {
-      cargo_manifest_dir: env!("CARGO_MANIFEST_DIR"),
+      cargo_manifest_dir: cwd_str.to_string().leak(),
       startup_snapshot: None,
       extensions: vec![deno_tsc::init_ops_and_esm(
         op_crate_libs,
@@ -311,8 +314,7 @@ pub(crate) fn version() -> String {
   panic!("Could not find ts version.")
 }
 
-fn deno_webgpu_get_declaration() -> PathBuf {
-  let manifest_dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
+fn deno_webgpu_get_declaration(manifest_dir: &Path) -> PathBuf {
   manifest_dir
     .join("tsc")
     .join("dts")
