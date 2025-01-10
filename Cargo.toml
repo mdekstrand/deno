@@ -33,6 +33,7 @@ members = [
   "resolvers/npm_cache",
   "runtime",
   "runtime/permissions",
+  "snapshot",
   "tests",
   "tests/ffi",
   "tests/napi",
